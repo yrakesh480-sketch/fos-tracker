@@ -114,9 +114,9 @@
       document.getElementById('loader').style.display = 'flex';
 
       try {
-        // Supabase Query: "FOS Database" टेबल से लॉग इन यूज़र का डेटा लाना
+        // Updated Table Name to FOS_Subuser
         const { data, error } = await supabaseClient
-          .from('FOS Database')
+          .from('FOS_Subuser')
           .select('*')
           .ilike('Subuser_ID', subuserInput);
 
