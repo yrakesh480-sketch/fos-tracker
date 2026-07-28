@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FOS Metrics Tracker - Secure Portal</title>
+  <title>FOS Metrics Tracker - Admin Portal</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Supabase JS -->
+  <!-- Supabase JS Library -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- PapaParse for CSV Upload -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
@@ -18,7 +18,7 @@
   <!-- Header / Navbar -->
   <nav class="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center">
     <h1 class="text-xl font-bold tracking-wide">📊 FOS Metrics Tracker</h1>
-    <button id="adminBtn" onclick="toggleAdminModal()" class="bg-blue-800 hover:bg-blue-900 px-3 py-1.5 rounded-lg text-sm font-semibold transition">
+    <button id="adminBtn" onclick="toggleAdminModal()" class="bg-blue-800 hover:bg-blue-900 px-3 py-1.5 rounded-lg text-sm font-semibold transition flex items-center gap-1">
       🔐 Admin Portal
     </button>
   </nav>
@@ -35,28 +35,15 @@
       </div>
     </div>
 
-    <!-- Disposition Summary Cards Section -->
-    <div id="dispositionSummary" class="hidden grid grid-cols-1 md:grid-cols-3 gap-4">
-      <!-- Example Disposition Box Template -->
-      <div id="dispCardTemplate" class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex justify-between items-center cursor-pointer hover:border-blue-400 transition">
-        <div>
-          <h4 id="dispName" class="text-sm font-semibold text-gray-500 uppercase">Disposition</h4>
-          <div class="flex items-center gap-2 mt-1">
-            <!-- Download Icon -->
-            <button onclick="downloadDispositionExcel(event, 'CURRENT_DISP')" title="Download .xlsm data" class="p-1 hover:bg-gray-100 rounded text-green-600 transition">
-              <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
-              </svg>
-            </button>
-            <span id="dispCount" class="text-2xl font-bold text-gray-800">0</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Data Results Table Section -->
     <div id="resultsContainer" class="hidden bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-      <h3 id="tableTitle" class="text-md font-bold text-gray-700 mb-3">Matching Loan Records</h3>
+      <div class="flex justify-between items-center mb-3">
+        <h3 id="tableTitle" class="text-md font-bold text-gray-700">Matching Loan Records</h3>
+        <!-- Excel Download Button -->
+        <button onclick="downloadExcel()" title="Download .xlsm data" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1 transition">
+          📥 Download .xlsm
+        </button>
+      </div>
       <div class="overflow-x-auto">
         <table class="w-full text-sm text-left text-gray-600 border-collapse">
           <thead class="text-xs text-gray-700 uppercase bg-gray-50 border-b">
@@ -77,7 +64,7 @@
   </div>
 
   <!-- Admin Secure Modal -->
-  <div id="adminModal" class="fixed inset-0 bg-black/50 hidden backdrop-blur-sm flex items-center justify-center p-4">
+  <div id="adminModal" class="fixed inset-0 bg-black/50 hidden backdrop-blur-sm flex items-center justify-center p-4 z-50">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
       <button onclick="toggleAdminModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
 
@@ -119,26 +106,32 @@
   </div>
 
   <script>
-    // Supabase Configuration
+    // Configuration Settings
     const SUPABASE_URL = "https://xzsgldwwfwmgcdzohgkp.supabase.co";
     const SUPABASE_KEY = "sb_publishable_FGLa9tMshbylTgTn5Ipf5A_ExB7SUEK";
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    // Replaced variable name to 'sbClient' to prevent Identifier Collision Error
+    const sbClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
     let currentFetchedData = [];
 
     function toggleAdminModal() {
-      document.getElementById('adminModal').classList.toggle('hidden');
+      const modal = document.getElementById('adminModal');
+      modal.classList.toggle('hidden');
     }
 
-    // Admin Login
+    // Admin Login Function
     async function loginAdmin() {
+      if (!sbClient) {
+        alert("Supabase client not loaded properly.");
+        return;
+      }
       const email = document.getElementById('adminEmail').value.trim();
       const password = document.getElementById('adminPassword').value;
       const errorTag = document.getElementById('loginError');
 
       errorTag.innerText = "⏳ Verifying...";
 
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
 
       if (error) {
         errorTag.innerText = "❌ " + error.message;
@@ -151,7 +144,7 @@
     }
 
     async function logoutAdmin() {
-      await supabase.auth.signOut();
+      if (sbClient) await sbClient.auth.signOut();
       document.getElementById('loginForm').classList.remove('hidden');
       document.getElementById('adminControls').classList.add('hidden');
       toggleAdminModal();
@@ -180,11 +173,11 @@
 
           try {
             // Delete old records
-            const { error: delErr } = await supabase.from('FOS Database').delete().neq('id', 0);
+            const { error: delErr } = await sbClient.from('FOS Database').delete().neq('id', 0);
             if (delErr) throw delErr;
 
             // Insert new rows
-            const { error: insErr } = await supabase.from('FOS Database').insert(rows);
+            const { error: insErr } = await sbClient.from('FOS Database').insert(rows);
             if (insErr) throw insErr;
 
             status.innerText = "✅ Database updated successfully!";
@@ -203,18 +196,31 @@
     // Search FOS Performance Data
     async function searchData() {
       const query = document.getElementById('searchInput').value.trim();
-      if (!query) return;
+      if (!query) {
+        alert("Please enter FOS Name or Subuser ID");
+        return;
+      }
 
-      const { data, error } = await supabase
+      if (!sbClient) {
+        alert("Database client error. Check keys.");
+        return;
+      }
+
+      const { data, error } = await sbClient
         .from('FOS Database')
         .select('*')
         .or(`FOS_Name.ilike.%${query}%,FOS_Subuser.ilike.%${query}%`);
+
+      if (error) {
+        alert("Error fetching data: " + error.message);
+        return;
+      }
 
       if (data && data.length) {
         currentFetchedData = data;
         renderDataTables(data);
       } else {
-        alert("No records found.");
+        alert("No records found for: " + query);
       }
     }
 
@@ -238,31 +244,17 @@
       });
     }
 
-    // .xlsm Data Download Functionality
-    function downloadDispositionExcel(event, dispositionType) {
-      event.stopPropagation(); // Stops Popup Modal from opening on download click
-
+    // Download .xlsm File
+    function downloadExcel() {
       if (!currentFetchedData.length) {
         alert("No data available to download!");
         return;
       }
 
-      // Filter data for clicked disposition (if applicable) or export current dataset
-      const filteredData = dispositionType && dispositionType !== 'ALL' 
-        ? currentFetchedData.filter(d => (d.Cycle || d.Aged_New || '').toUpperCase() === dispositionType.toUpperCase())
-        : currentFetchedData;
-
-      if (!filteredData.length) {
-        alert("No records found for this disposition!");
-        return;
-      }
-
-      // Extract details for filename: CityManager_FOSName_DD-MM-YY.xlsm
-      const firstRow = filteredData[0];
+      const firstRow = currentFetchedData[0];
       const cityManager = (firstRow.CITY_MANAGER || "CityManager").replace(/\s+/g, '_');
       const fosName = (firstRow.FOS_Name || "FOS").replace(/\s+/g, '_');
 
-      // Today's Date formatted as DD/MM/YY
       const today = new Date();
       const dd = String(today.getDate()).padStart(2, '0');
       const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -271,12 +263,10 @@
 
       const filename = `${cityManager}_${fosName}_${formattedDate}.xlsm`;
 
-      // Convert JSON data to SheetJS Workbook
-      const worksheet = XLSX.utils.json_to_sheet(filteredData);
+      const worksheet = XLSX.utils.json_to_sheet(currentFetchedData);
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "DispositionData");
+      XLSX.utils.book_append_sheet(workbook, worksheet, "FOS_Data");
 
-      // Save file as .xlsm
       XLSX.writeFile(workbook, filename, { bookType: 'xlsm' });
     }
   </script>
