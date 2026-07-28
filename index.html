@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FOS Metrics Tracker - Admin Portal</title>
+  <title>FOS Metrics Tracker - Premium Dashboard</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Supabase JS Library -->
+  <!-- Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- PapaParse for CSV Upload -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
@@ -17,43 +17,52 @@
 
   <!-- Header / Navbar -->
   <nav class="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center">
-    <h1 class="text-xl font-bold tracking-wide">📊 FOS Metrics Tracker</h1>
-    <button id="adminBtn" onclick="toggleAdminModal()" class="bg-blue-800 hover:bg-blue-900 px-3 py-1.5 rounded-lg text-sm font-semibold transition flex items-center gap-1">
+    <div class="flex items-center gap-2">
+      <span class="text-2xl">📊</span>
+      <h1 class="text-xl font-bold tracking-wide">FOS Metrics Tracker</h1>
+    </div>
+    <button onclick="toggleAdminModal()" class="bg-blue-800 hover:bg-blue-900 px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1.5 shadow">
       🔐 Admin Portal
     </button>
   </nav>
 
   <!-- Main Container -->
-  <div class="max-w-4xl mx-auto p-4 space-y-6">
+  <div class="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
     
     <!-- User Search Section -->
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-      <h2 class="text-lg font-semibold text-gray-800 mb-4">🔍 Search FOS Performance</h2>
-      <div class="flex gap-2">
-        <input type="text" id="searchInput" placeholder="Enter FOS Name or Subuser ID..." class="w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        <button onclick="searchData()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium">Search</button>
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+      <h2 class="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+        🔍 Search FOS Performance
+      </h2>
+      <div class="flex gap-3">
+        <input type="text" id="searchInput" placeholder="Enter FOS Name or Subuser ID..." class="w-full p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700">
+        <button onclick="searchData()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition shadow-md">Search</button>
       </div>
     </div>
 
+    <!-- Disposition Summary Grid -->
+    <div id="dispositionGrid" class="hidden grid grid-cols-2 md:grid-cols-4 gap-4">
+      <!-- Cards will be dynamically injected here -->
+    </div>
+
     <!-- Data Results Table Section -->
-    <div id="resultsContainer" class="hidden bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-      <div class="flex justify-between items-center mb-3">
-        <h3 id="tableTitle" class="text-md font-bold text-gray-700">Matching Loan Records</h3>
-        <!-- Excel Download Button -->
-        <button onclick="downloadExcel()" title="Download .xlsm data" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1 transition">
-          📥 Download .xlsm
+    <div id="resultsContainer" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+      <div class="flex justify-between items-center mb-4">
+        <h3 id="tableTitle" class="text-md font-bold text-gray-700">Matching Records</h3>
+        <button onclick="downloadDispositionExcel(event, 'ALL')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition shadow">
+          📥 Download All .xlsm
         </button>
       </div>
-      <div class="overflow-x-auto">
+      <div class="overflow-x-auto rounded-xl border border-gray-100">
         <table class="w-full text-sm text-left text-gray-600 border-collapse">
           <thead class="text-xs text-gray-700 uppercase bg-gray-50 border-b">
             <tr>
-              <th class="p-3">Ref No</th>
-              <th class="p-3">Customer Name</th>
-              <th class="p-3">POS Amount</th>
-              <th class="p-3">Cycle</th>
-              <th class="p-3">FOS Name</th>
-              <th class="p-3">City Manager</th>
+              <th class="p-3.5">Ref No</th>
+              <th class="p-3.5">Customer Name</th>
+              <th class="p-3.5">POS Amount</th>
+              <th class="p-3.5">Cycle</th>
+              <th class="p-3.5">FOS Name</th>
+              <th class="p-3.5">City Manager</th>
             </tr>
           </thead>
           <tbody id="tableBody"></tbody>
@@ -63,74 +72,97 @@
 
   </div>
 
+  <!-- Popup / Modal for Disposition Details -->
+  <div id="dispModal" class="fixed inset-0 bg-black/50 hidden backdrop-blur-sm flex items-center justify-center p-4 z-40">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 relative">
+      <button onclick="closeDispModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl font-bold">&times;</button>
+      <div class="flex justify-between items-center mb-4 pr-6">
+        <h3 id="modalTitle" class="text-lg font-bold text-gray-800">Disposition Details</h3>
+        <button id="modalDownloadBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
+          📥 Download .xlsm
+        </button>
+      </div>
+      <div class="max-h-80 overflow-y-auto rounded-xl border border-gray-100">
+        <table class="w-full text-sm text-left text-gray-600">
+          <thead class="text-xs text-gray-700 uppercase bg-gray-50 border-b sticky top-0">
+            <tr>
+              <th class="p-3">Ref No</th>
+              <th class="p-3">Customer Name</th>
+              <th class="p-3">POS Amount</th>
+              <th class="p-3">Cycle</th>
+            </tr>
+          </thead>
+          <tbody id="modalTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- Admin Secure Modal -->
   <div id="adminModal" class="fixed inset-0 bg-black/50 hidden backdrop-blur-sm flex items-center justify-center p-4 z-50">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
       <button onclick="toggleAdminModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
 
-      <!-- Step A: Secure Supabase Login -->
+      <!-- Admin Login -->
       <div id="loginForm" class="space-y-4">
         <div>
           <h2 class="text-xl font-bold text-gray-800">🔐 Secure Admin Login</h2>
           <p class="text-xs text-gray-500">Sign in with Supabase Admin Email & Password</p>
         </div>
-        <input type="email" id="adminEmail" placeholder="Admin Email" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-        <input type="password" id="adminPassword" placeholder="Admin Password" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-        <button onclick="loginAdmin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-semibold">Login</button>
+        <input type="email" id="adminEmail" placeholder="Admin Email" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+        <input type="password" id="adminPassword" placeholder="Admin Password" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+        <button onclick="loginAdmin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold transition">Login</button>
         <p id="loginError" class="text-xs text-red-500 font-semibold text-center"></p>
       </div>
 
-      <!-- Step B: Admin Upload Controls -->
+      <!-- Admin Controls -->
       <div id="adminControls" class="hidden space-y-4">
         <div class="border-b pb-3">
           <h2 class="text-xl font-bold text-gray-800">⚡ Admin Data Control</h2>
-          <p class="text-xs text-green-600 font-semibold mt-1" id="adminUserStatus">● Authenticated Admin</p>
+          <p class="text-xs text-emerald-600 font-semibold mt-1" id="adminUserStatus">● Authenticated Admin</p>
         </div>
 
         <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
           <label class="block text-sm font-semibold text-gray-700 mb-2">📤 Upload New CSV Data</label>
-          <input type="file" id="csvFileInput" accept=".csv" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
+          <input type="file" id="csvFileInput" accept=".csv" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
           <p class="text-xs text-gray-500 mt-2">Uploading CSV will replace old data with fresh records.</p>
         </div>
 
-        <button id="uploadBtn" onclick="processAndUploadCSV()" class="w-full bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg font-semibold">
+        <button id="uploadBtn" onclick="processAndUploadCSV()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-semibold transition">
           🚀 Wipe & Replace Data
         </button>
 
         <div id="uploadStatus" class="text-xs font-semibold text-center text-gray-600"></div>
 
-        <button onclick="logoutAdmin()" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg text-sm font-semibold mt-2">Sign Out Admin</button>
+        <button onclick="logoutAdmin()" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2.5 rounded-xl text-sm font-semibold mt-2">Sign Out Admin</button>
       </div>
 
     </div>
   </div>
 
   <script>
-    // Configuration Settings
     const SUPABASE_URL = "https://xzsgldwwfwmgcdzohgkp.supabase.co";
     const SUPABASE_KEY = "sb_publishable_FGLa9tMshbylTgTn5Ipf5A_ExB7SUEK";
 
-    // Replaced variable name to 'sbClient' to prevent Identifier Collision Error
     const sbClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
     let currentFetchedData = [];
 
     function toggleAdminModal() {
-      const modal = document.getElementById('adminModal');
-      modal.classList.toggle('hidden');
+      document.getElementById('adminModal').classList.toggle('hidden');
     }
 
-    // Admin Login Function
+    function closeDispModal() {
+      document.getElementById('dispModal').classList.add('hidden');
+    }
+
+    // Admin Login
     async function loginAdmin() {
-      if (!sbClient) {
-        alert("Supabase client not loaded properly.");
-        return;
-      }
+      if (!sbClient) return alert("Database connection error.");
       const email = document.getElementById('adminEmail').value.trim();
       const password = document.getElementById('adminPassword').value;
       const errorTag = document.getElementById('loginError');
 
       errorTag.innerText = "⏳ Verifying...";
-
       const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
 
       if (error) {
@@ -150,16 +182,13 @@
       toggleAdminModal();
     }
 
-    // Process CSV Upload
+    // CSV Process & Upload
     async function processAndUploadCSV() {
       const fileInput = document.getElementById('csvFileInput');
       const status = document.getElementById('uploadStatus');
       const uploadBtn = document.getElementById('uploadBtn');
 
-      if (!fileInput.files.length) {
-        alert("Please select a CSV file first!");
-        return;
-      }
+      if (!fileInput.files.length) return alert("Please select a CSV file first!");
 
       uploadBtn.disabled = true;
       status.innerText = "⏳ Reading CSV file...";
@@ -172,11 +201,9 @@
           status.innerText = `⏳ Uploading ${rows.length} records...`;
 
           try {
-            // Delete old records
             const { error: delErr } = await sbClient.from('FOS Database').delete().neq('id', 0);
             if (delErr) throw delErr;
 
-            // Insert new rows
             const { error: insErr } = await sbClient.from('FOS Database').insert(rows);
             if (insErr) throw insErr;
 
@@ -193,35 +220,60 @@
       });
     }
 
-    // Search FOS Performance Data
+    // Search FOS Performance
     async function searchData() {
       const query = document.getElementById('searchInput').value.trim();
-      if (!query) {
-        alert("Please enter FOS Name or Subuser ID");
-        return;
-      }
+      if (!query) return alert("Please enter FOS Name or Subuser ID");
 
-      if (!sbClient) {
-        alert("Database client error. Check keys.");
-        return;
-      }
+      if (!sbClient) return alert("Database connection error.");
 
       const { data, error } = await sbClient
         .from('FOS Database')
         .select('*')
         .or(`FOS_Name.ilike.%${query}%,FOS_Subuser.ilike.%${query}%`);
 
-      if (error) {
-        alert("Error fetching data: " + error.message);
-        return;
-      }
+      if (error) return alert("Error fetching data: " + error.message);
 
       if (data && data.length) {
         currentFetchedData = data;
+        renderDispositionCards(data);
         renderDataTables(data);
       } else {
         alert("No records found for: " + query);
       }
+    }
+
+    // Render Disposition Cards with Download Logo & Click Popup
+    function renderDispositionCards(data) {
+      const grid = document.getElementById('dispositionGrid');
+      grid.innerHTML = '';
+      grid.classList.remove('hidden');
+
+      // Group Counts
+      const counts = {};
+      data.forEach(r => {
+        const disp = (r.Cycle || r.Aged_New || 'OTHER').toUpperCase();
+        counts[disp] = (counts[disp] || 0) + 1;
+      });
+
+      Object.keys(counts).forEach(disp => {
+        grid.innerHTML += `
+          <div onclick="openDispModal('${disp}')" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 cursor-pointer hover:border-blue-400 hover:shadow-md transition flex justify-between items-center group">
+            <div>
+              <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">${disp}</p>
+              <div class="flex items-center gap-2 mt-1">
+                <button onclick="downloadDispositionExcel(event, '${disp}')" title="Download ${disp} .xlsm" class="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition">
+                  <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                  </svg>
+                </button>
+                <span class="text-2xl font-extrabold text-gray-800">${counts[disp]}</span>
+              </div>
+            </div>
+            <span class="text-gray-300 group-hover:text-blue-500 text-lg transition">➔</span>
+          </div>
+        `;
+      });
     }
 
     function renderDataTables(data) {
@@ -232,26 +284,56 @@
 
       data.forEach(row => {
         tbody.innerHTML += `
-          <tr class="border-b hover:bg-gray-50">
-            <td class="p-3 font-medium text-gray-900">${row.Loan_Ref_No || '-'}</td>
-            <td class="p-3">${row.Customer_Name || '-'}</td>
-            <td class="p-3 font-semibold text-green-600">₹${row.POS_Amount || 0}</td>
-            <td class="p-3">${row.Cycle || '-'}</td>
-            <td class="p-3">${row.FOS_Name || '-'}</td>
-            <td class="p-3">${row.CITY_MANAGER || '-'}</td>
+          <tr class="border-b hover:bg-gray-50/80 transition">
+            <td class="p-3.5 font-semibold text-gray-900">${row.Loan_Ref_No || '-'}</td>
+            <td class="p-3.5">${row.Customer_Name || '-'}</td>
+            <td class="p-3.5 font-bold text-emerald-600">₹${row.POS_Amount || 0}</td>
+            <td class="p-3.5"><span class="bg-blue-50 text-blue-700 font-semibold px-2.5 py-1 rounded-md text-xs">${row.Cycle || '-'}</span></td>
+            <td class="p-3.5">${row.FOS_Name || '-'}</td>
+            <td class="p-3.5">${row.CITY_MANAGER || '-'}</td>
           </tr>
         `;
       });
     }
 
-    // Download .xlsm File
-    function downloadExcel() {
-      if (!currentFetchedData.length) {
-        alert("No data available to download!");
-        return;
-      }
+    // Open Modal for Specific Disposition
+    function openDispModal(dispType) {
+      const filtered = currentFetchedData.filter(r => (r.Cycle || r.Aged_New || 'OTHER').toUpperCase() === dispType);
+      
+      document.getElementById('modalTitle').innerText = `${dispType} Records (${filtered.length})`;
+      const modalBtn = document.getElementById('modalDownloadBtn');
+      modalBtn.onclick = (e) => downloadDispositionExcel(e, dispType);
 
-      const firstRow = currentFetchedData[0];
+      const tbody = document.getElementById('modalTableBody');
+      tbody.innerHTML = '';
+
+      filtered.forEach(row => {
+        tbody.innerHTML += `
+          <tr class="border-b hover:bg-gray-50">
+            <td class="p-3 font-semibold text-gray-900">${row.Loan_Ref_No || '-'}</td>
+            <td class="p-3">${row.Customer_Name || '-'}</td>
+            <td class="p-3 font-bold text-emerald-600">₹${row.POS_Amount || 0}</td>
+            <td class="p-3">${row.Cycle || '-'}</td>
+          </tr>
+        `;
+      });
+
+      document.getElementById('dispModal').classList.remove('hidden');
+    }
+
+    // Download Single Disposition or All as .xlsm
+    function downloadDispositionExcel(event, dispositionType) {
+      if (event) event.stopPropagation();
+
+      if (!currentFetchedData.length) return alert("No data available to download!");
+
+      const filteredData = (dispositionType && dispositionType !== 'ALL')
+        ? currentFetchedData.filter(d => (d.Cycle || d.Aged_New || 'OTHER').toUpperCase() === dispositionType.toUpperCase())
+        : currentFetchedData;
+
+      if (!filteredData.length) return alert("No records found for this disposition!");
+
+      const firstRow = filteredData[0];
       const cityManager = (firstRow.CITY_MANAGER || "CityManager").replace(/\s+/g, '_');
       const fosName = (firstRow.FOS_Name || "FOS").replace(/\s+/g, '_');
 
@@ -263,9 +345,9 @@
 
       const filename = `${cityManager}_${fosName}_${formattedDate}.xlsm`;
 
-      const worksheet = XLSX.utils.json_to_sheet(currentFetchedData);
+      const worksheet = XLSX.utils.json_to_sheet(filteredData);
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "FOS_Data");
+      XLSX.utils.book_append_sheet(workbook, worksheet, "DispositionData");
 
       XLSX.writeFile(workbook, filename, { bookType: 'xlsm' });
     }
