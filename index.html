@@ -3,140 +3,550 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FOS Metrics Tracker - Premium Dashboard</title>
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Supabase JS -->
+  <title>FOS Premium Performance Tracker</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- ExcelJS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+  <!-- Supabase & PapaParse -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- PapaParse for CSV Upload -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-  <!-- SheetJS (XLSX) for .xlsm export -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root{--_p:#1e3a8a;--_pg:linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);--_bg:#ffffff;--_tm:#0f172a;--_ts:#64748b;--_bd:#e2e8f0;--_rd:#ef4444}
+    *{box-sizing:border-box;margin:0;padding:0;font-family:'Poppins',sans-serif;-webkit-tap-highlight-color:transparent}
+    body{background-color:#f5f6fa;background-image:linear-gradient(60deg,rgba(230,233,250,0.7) 25%,transparent 25%),linear-gradient(120deg,rgba(230,233,250,0.7) 25%,transparent 25%),linear-gradient(60deg,transparent 75%,rgba(230,233,250,0.7) 75%),linear-gradient(120deg,transparent 75%,rgba(230,233,250,0.7) 75%);background-size:100% 100%;background-attachment:fixed;color:var(--_tm);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:12px}
+    .phone-container{width:100%;max-width:420px;height:94vh;max-height:850px;background:rgba(255,255,255,0.88);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:32px;box-shadow:0 30px 60px -15px rgba(30,58,138,0.15);overflow:hidden;border:1px solid rgba(255,255,255,0.7);display:flex;flex-direction:column;position:relative}
+    .login-screen-wrapper{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:24px}
+    .login-card{width:100%;background:var(--_bg);border-radius:24px;padding:35px 24px;box-shadow:0 20px 40px rgba(15,23,42,0.06);border:1px solid #f1f5f9;text-align:center}
+    .login-card h2{font-size:18px;font-weight:700;color:#1e3a8a;margin-bottom:8px}
+    .input-group{width:100%;margin-bottom:16px}
+    .login-input{width:100%;padding:14px;border:1px solid #cbd5e1;border-radius:12px;font-size:14px;text-align:center;outline:none;background:#f8fafc;transition:all 0.3s;margin-bottom:10px}
+    .login-input:focus{border-color:#2563eb;background:#ffffff;box-shadow:0 0 0 4px rgba(37,99,235,0.1)}
+    .login-submit-btn{width:100%;padding:14px;background:#2563eb;color:white;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;transition:0.2s}
+    .app-header{background:var(--_pg);color:white;padding:16px 20px;display:flex;justify-content:space-between;align-items:center}
+    .app-header h1{font-size:15px;font-weight:600}
+    .logout-btn{background:rgba(255,255,255,0.2);border:none;color:white;padding:6px 14px;border-radius:12px;font-size:11px;font-weight:600;cursor:pointer}
+    .admin-nav-btn{background:rgba(255,255,255,0.15);border:none;color:white;padding:6px 12px;border-radius:12px;font-size:11px;font-weight:600;cursor:pointer;margin-right:6px}
+    .filter-bar{background:#ffffff;border-bottom:1px solid var(--_bd);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .filter-lbl{font-size:12px;font-weight:600;color:var(--_tm);display:flex;align-items:center;gap:6px}
+    .custom-select{flex:1;max-width:180px;padding:8px 12px;border-radius:10px;border:1px solid var(--_bd);font-size:12px;font-weight:500;outline:none;color:#334155;background-color:#f8fafc}
+    .dashboard-content{padding:16px;flex:1;display:none;overflow-y:auto}
+    .profile-card{background:var(--_bg);border-radius:20px;padding:12px 16px;margin-bottom:16px;box-shadow:0 4px 12px rgba(0,0,0,0.02);border:1px solid var(--_bd)}
+    .profile-row{display:flex;align-items:center;margin-bottom:10px;border-bottom:1px dashed #f1f5f9;padding-bottom:10px}
+    .profile-row:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
+    .avatar-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;margin-right:14px;color:white}
+    .bg-fos{background:#2563eb}.bg-cm{background:#7c3aed}.bg-sh{background:#ea580c}
+    .profile-info{display:flex;flex-direction:column}
+    .profile-info .p-lbl{font-size:10px;color:var(--_ts);font-weight:500;text-transform:uppercase}
+    .profile-info .p-val{font-size:13px;color:var(--_tm);font-weight:600}
+    .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+    .kpi-box{background:var(--_bg);border-radius:16px;padding:14px 4px;text-align:center;border:1px solid var(--_bd);box-shadow:0 4px 10px rgba(0,0,0,0.01);display:flex;flex-direction:column;align-items:center;justify-content:center}
+    .kpi-icon{font-size:14px;margin-bottom:6px}
+    .color-1{color:#2563eb}.color-2{color:#059669}.color-3{color:#7c3aed}.color-4{color:#dc2626}.color-5{color:#d97706}.color-6{color:#db2777}
+    .kpi-title{font-size:9px;color:var(--_ts);font-weight:500;text-transform:uppercase;margin-bottom:2px}
+    .kpi-value{font-size:13px;font-weight:700;color:var(--_tm)}
+    .section-title{font-size:13px;font-weight:600;color:var(--_tm);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+    .disp-group{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+    .disp-row{background:var(--_bg);padding:12px 14px;border-radius:14px;border:1px solid var(--_bd);display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:0.2s;box-shadow:0 2px 6px rgba(0,0,0,0.01)}
+    .disp-row:active{background:#f1f5f9}
+    .disp-left{display:flex;align-items:center;gap:10px}
+    .disp-left i{font-size:13px;width:18px;text-align:center}
+    .disp-name{font-size:12px;font-weight:600;color:#334155}
+    .disp-badge{background:#f1f5f9;color:#2563eb;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid var(--_bd)}
+    .disp-download-btn{background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;width:26px;height:26px;border-radius:8px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:0.2s}
+    .disp-download-btn:active{background:#2563eb;color:#fff}
+    .info-strip{background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:10px;font-size:10px;color:#1e40af;display:flex;align-items:center;gap:8px;font-weight:500}
+    .modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.4);z-index:2000}
+    .modal-sheet{position:absolute;bottom:0;left:0;right:0;background:var(--_bg);border-radius:24px 24px 0 0;max-height:75vh;display:flex;flex-direction:column;box-shadow:0 -10px 25px rgba(0,0,0,0.1)}
+    .modal-header{padding:14px 20px;border-bottom:1px solid var(--_bd);display:flex;align-items:center;justify-content:space-between}
+    .modal-title-wrapper{display:flex;align-items:center;gap:8px}
+    .modal-bar{width:4px;height:14px;background:#2563eb;border-radius:2px}
+    .modal-header h2{font-size:14px;font-weight:600}
+    .modal-close{font-size:18px;color:var(--_ts);cursor:pointer}
+    .modal-body{flex:1;overflow-y:scroll;padding:14px;-webkit-overflow-scrolling:touch}
+    .loan-card{background:#f8fafc;border:1px solid var(--_bd);border-radius:12px;padding:12px;margin-bottom:8px;box-shadow:0 2px 4px rgba(0,0,0,0.01)}
+    .loan-card-row{display:flex;justify-content:space-between;margin-bottom:4px;font-size:11px}
+    .l-lbl{color:var(--_ts)}.l-val{color:var(--_tm);font-weight:500;text-align:right}
+    .l-val.pos-red{color:var(--_rd);font-weight:700}.l-val.disp-blue{color:#2563eb;font-weight:600}
+    .pagination-strip{padding:10px 16px;border-top:1px solid var(--_bd);display:flex;justify-content:space-between;align-items:center;background:#f8fafc}
+    .pag-btn{background:white;border:1px solid var(--_bd);padding:5px 12px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px}
+    .pag-btn:disabled{opacity:0.5;cursor:not-allowed}
+    .pag-info{font-size:11px;font-weight:500;color:var(--_ts)}
+    .loading-overlay{display:none;position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.88);z-index:100;justify-content:center;align-items:center;flex-direction:column;font-size:13px;font-weight:600;color:#1e3a8a}
+  </style>
 </head>
-<body class="bg-slate-100 min-h-screen font-sans text-slate-800">
+<body>
 
-  <!-- Header / Navbar -->
-  <nav class="bg-blue-600 text-white px-6 py-4 shadow-md flex justify-between items-center">
-    <div class="flex items-center gap-2">
-      <span class="text-xl">📊</span>
-      <h1 class="text-lg font-bold tracking-wide">FOS Metrics Tracker</h1>
-    </div>
-    <button onclick="toggleAdminModal()" class="bg-blue-800 hover:bg-blue-900 px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow">
-      🔐 Admin Portal
-    </button>
-  </nav>
-
-  <!-- Main Container -->
-  <div class="max-w-6xl mx-auto p-6 space-y-6">
+  <div class="phone-container">
+    <div id="loader" class="loading-overlay"><i class="fa-solid fa-spinner fa-spin" style="font-size:30px; margin-bottom:12px; color:#2563eb;"></i>Loading Dashboard...</div>
     
-    <!-- User Search Section -->
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
-      <h2 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-        🔍 Search FOS Performance
-      </h2>
-      <div class="flex gap-3">
-        <input type="text" id="searchInput" placeholder="Enter FOS Name or Subuser ID..." class="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-slate-700 bg-slate-50/50">
-        <button onclick="searchData()" class="bg-blue-600 hover:bg-blue-700 text-white px-7 py-3 rounded-xl text-sm font-semibold transition shadow-md">Search</button>
+    <div class="app-header">
+      <h1>FOS Performance Tracking</h1>
+      <div>
+        <button id="adminBtn" class="admin-nav-btn" onclick="toggleAdminModal()"><i class="fa-solid fa-lock"></i> Admin</button>
+        <button id="logoutBtn" class="logout-btn" style="display:none;" onclick="handleInstantLogout()">Logout</button>
       </div>
     </div>
 
-    <!-- Disposition Summary Grid Cards -->
-    <div id="dispositionGrid" class="hidden grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-      <!-- Cards injected dynamically -->
+    <div id="filterEngineBar" class="filter-bar" style="display: none;">
+      <span class="filter-lbl"><i class="fa-solid fa-filter" style="color:#2563eb;"></i> Cycle BKT:</span>
+      <select id="cycleDropdown" class="custom-select" onchange="triggerCycleFilter()"></select>
     </div>
 
-    <!-- Data Results Table Section -->
-    <div id="resultsContainer" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="text-sm font-bold text-slate-700">Matching Records</h3>
-        <button onclick="downloadExcel('ALL')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition shadow">
-          📥 Download All .xlsm
-        </button>
-      </div>
-      <div class="overflow-x-auto rounded-xl border border-slate-100">
-        <table class="w-full text-xs text-left text-slate-600 border-collapse">
-          <thead class="text-[11px] text-slate-500 uppercase bg-slate-50/80 border-b border-slate-200/60 font-bold tracking-wider">
-            <tr>
-              <th class="p-3.5">REF NO</th>
-              <th class="p-3.5">CUSTOMER NAME</th>
-              <th class="p-3.5">POS AMOUNT</th>
-              <th class="p-3.5">CYCLE</th>
-              <th class="p-3.5">FOS NAME</th>
-              <th class="p-3.5">CITY MANAGER</th>
-            </tr>
-          </thead>
-          <tbody id="tableBody" class="divide-y divide-slate-100"></tbody>
-        </table>
+    <!-- Login View -->
+    <div id="loginView" class="login-screen-wrapper">
+      <div class="login-card">
+        <div style="width: 60px; height: 60px; background: #eff6ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; border: 1px solid #bfdbfe;">
+          <i class="fa-solid fa-shield-halved" style="font-size: 26px; color: #2563eb;"></i>
+        </div>
+        <h2>FOS Performance Tracking</h2>
+        <p style="font-size: 11px; color: var(--_ts); margin-bottom: 20px;">Sign in to check your metrics</p>
+        <div class="input-group">
+          <input type="text" id="subuserInput" class="login-input" placeholder="Enter your subuser number" autocomplete="off" oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <button class="login-submit-btn" onclick="handleLogin()">Login</button>
       </div>
     </div>
 
-  </div>
+    <!-- Dashboard View -->
+    <div id="dashboardView" class="dashboard-content">
+      <div class="profile-card">
+        <div class="profile-row"><div class="avatar-icon bg-fos"><i class="fa-solid fa-user-tie"></i></div><div class="profile-info"><span class="p-lbl">FOS Name</span><span class="p-val" id="profFos">-</span></div></div>
+        <div class="profile-row"><div class="avatar-icon bg-cm"><i class="fa-solid fa-building-user"></i></div><div class="profile-info"><span class="p-lbl">City Manager (CM)</span><span class="p-val" id="profCm">-</span></div></div>
+        <div class="profile-row"><div class="avatar-icon bg-sh"><i class="fa-solid fa-crown"></i></div><div class="profile-info"><span class="p-lbl">State Head (SH)</span><span class="p-val" id="profSh">-</span></div></div>
+      </div>
 
-  <!-- Popup Modal for Disposition Details -->
-  <div id="dispModal" class="fixed inset-0 bg-slate-900/40 hidden backdrop-blur-sm flex items-center justify-center p-4 z-40">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 relative border border-slate-100">
-      <button onclick="closeDispModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
-      <div class="flex justify-between items-center mb-4 pr-6">
-        <h3 id="modalTitle" class="text-base font-bold text-slate-800">Disposition Details</h3>
-        <button id="modalDownloadBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 transition">
-          📥 Download .xlsm
-        </button>
+      <div class="kpi-grid">
+        <div class="kpi-box"><i class="fa-solid fa-clipboard-list kpi-icon color-1"></i><span class="kpi-title">Total Case</span><span class="kpi-value" id="kpiTotalCase">0</span></div>
+        <div class="kpi-box"><i class="fa-solid fa-briefcase kpi-icon color-2"></i><span class="kpi-title">Paid Count</span><span class="kpi-value" id="kpiPaidCount">0</span></div>
+        <div class="kpi-box"><i class="fa-solid fa-percent kpi-icon color-3"></i><span class="kpi-title">% Paid</span><span class="kpi-value" id="kpiPctPaid">0%</span></div>
+        <div class="kpi-box"><i class="fa-solid fa-wallet kpi-icon color-4"></i><span class="kpi-title">P O/S</span><span class="kpi-value" id="kpiPOs">0</span></div>
+        <div class="kpi-box"><i class="fa-solid fa-gavel kpi-icon color-5"></i><span class="kpi-title">Resolution</span><span class="kpi-value" id="kpiResolution">0</span></div>
+        <div class="kpi-box"><i class="fa-solid fa-chart-pie kpi-icon color-6"></i><span class="kpi-title">% Res.</span><span class="kpi-value" id="kpiPctResolution">0%</span></div>
       </div>
-      <div class="max-h-80 overflow-y-auto rounded-xl border border-slate-100">
-        <table class="w-full text-xs text-left text-slate-600">
-          <thead class="text-[11px] text-slate-500 uppercase bg-slate-50 border-b sticky top-0 font-bold">
-            <tr>
-              <th class="p-3">Ref No</th>
-              <th class="p-3">Customer Name</th>
-              <th class="p-3">POS Amount</th>
-              <th class="p-3">Cycle</th>
-            </tr>
-          </thead>
-          <tbody id="modalTableBody" class="divide-y divide-slate-100"></tbody>
-        </table>
-      </div>
+
+      <div class="section-title"><i class="fa-solid fa-list-check" style="color:#2563eb;"></i><span>Disposition Summary</span></div>
+      <div class="disp-group" id="dispositionContainer"></div>
+      <div class="info-strip"><i class="fa-solid fa-circle-info"></i><span>Tap on any disposition to view customer details with POS.</span></div>
     </div>
   </div>
 
-  <!-- Admin Modal -->
-  <div id="adminModal" class="fixed inset-0 bg-slate-900/50 hidden backdrop-blur-sm flex items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
-      <button onclick="toggleAdminModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+  <!-- Detail Sheet Modal -->
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div class="modal-title-wrapper"><div class="modal-bar"></div><h2 id="modalTitle">Details</h2></div>
+        <span class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></span>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="pagination-strip">
+        <button class="pag-btn" id="prevPageBtn" onclick="changePage(-1)"><i class="fa-solid fa-chevron-left"></i> Prev</button>
+        <span class="pag-info" id="pageNumberDisplay">Page 1 of 1</span>
+        <button class="pag-btn" id="nextPageBtn" onclick="changePage(1)">Next <i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+    </div>
+  </div>
 
-      <div id="loginForm" class="space-y-4">
-        <div>
-          <h2 class="text-lg font-bold text-slate-800">🔐 Secure Admin Login</h2>
-          <p class="text-xs text-slate-500">Sign in with Supabase Admin Email & Password</p>
-        </div>
-        <input type="email" id="adminEmail" placeholder="Admin Email" class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-xs bg-slate-50">
-        <input type="password" id="adminPassword" placeholder="Admin Password" class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-xs bg-slate-50">
-        <button onclick="loginAdmin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl text-xs font-semibold transition">Login</button>
-        <p id="loginError" class="text-xs text-red-500 font-semibold text-center"></p>
+  <!-- Admin Control Modal -->
+  <div class="modal-overlay" id="adminModal">
+    <div class="modal-sheet" style="max-height:85vh; padding:20px;">
+      <div class="modal-header" style="padding:0 0 10px 0;">
+        <div class="modal-title-wrapper"><div class="modal-bar"></div><h2>Admin Control Portal</h2></div>
+        <span class="modal-close" onclick="toggleAdminModal()"><i class="fa-solid fa-xmark"></i></span>
       </div>
 
-      <div id="adminControls" class="hidden space-y-4">
-        <div class="border-b pb-3">
-          <h2 class="text-lg font-bold text-slate-800">⚡ Admin Data Control</h2>
-          <p class="text-xs text-emerald-600 font-semibold mt-1" id="adminUserStatus">● Authenticated Admin</p>
+      <div id="adminLoginForm" style="display:block; padding-top:10px;">
+        <p style="font-size:11px; color:var(--_ts); margin-bottom:12px;">Sign in with Supabase Admin Email & Password</p>
+        <input type="email" id="adminEmail" class="login-input" placeholder="Admin Email" style="text-align:left;">
+        <input type="password" id="adminPassword" class="login-input" placeholder="Admin Password" style="text-align:left;">
+        <button class="login-submit-btn" onclick="loginAdmin()">Login to Admin</button>
+        <p id="adminLoginError" style="font-size:11px; color:red; text-align:center; margin-top:8px; font-weight:600;"></p>
+      </div>
+
+      <div id="adminControls" style="display:none; padding-top:10px;">
+        <p id="adminUserStatus" style="font-size:11px; color:#059669; font-weight:600; margin-bottom:12px;">● Authenticated Admin</p>
+        <div style="background:#eff6ff; padding:12px; border-radius:12px; border:1px solid #bfdbfe; margin-bottom:12px;">
+          <label style="font-size:11px; font-weight:600; color:#1e3a8a; display:block; margin-bottom:6px;">📤 Upload New CSV Data</label>
+          <input type="file" id="csvFileInput" accept=".csv" style="font-size:11px; width:100%;">
         </div>
-
-        <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-          <label class="block text-xs font-semibold text-slate-700 mb-2">📤 Upload New CSV Data</label>
-          <input type="file" id="csvFileInput" accept=".csv" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
-        </div>
-
-        <button id="uploadBtn" onclick="processAndUploadCSV()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl text-xs font-semibold transition">
-          🚀 Wipe & Replace Data
-        </button>
-
-        <div id="uploadStatus" class="text-xs font-semibold text-center text-slate-600"></div>
-        <button onclick="logoutAdmin()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 py-2.5 rounded-xl text-xs font-semibold mt-2">Sign Out Admin</button>
+        <button id="uploadBtn" class="login-submit-btn" style="background:#059669;" onclick="processAndUploadCSV()">🚀 Wipe & Replace Data</button>
+        <div id="uploadStatus" style="font-size:11px; text-align:center; margin-top:8px; font-weight:600;"></div>
+        <button class="login-submit-btn" style="background:#64748b; margin-top:12px;" onclick="logoutAdmin()">Sign Out Admin</button>
       </div>
     </div>
   </div>
 
   <script>
-    var SUPABASE_URL="https://xzsgldwwfwmgcdzohgkp.supabase.co",SUPABASE_KEY="sb_publishable_FGLa9tMshbylTgTn5Ipf5A_ExB7SUEK",spBase=window.supabase?window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null,currentFetchedData=[];function toggleAdminModal(){document.getElementById("adminModal").classList.toggle("hidden")}function closeDispModal(){document.getElementById("dispModal").classList.add("hidden")}async function loginAdmin(){if(!spBase)return alert("Database error.");var e=document.getElementById("adminEmail").value.trim(),t=document.getElementById("adminPassword").value,a=document.getElementById("loginError");a.innerText="⏳ Verifying...";var n=await spBase.auth.signInWithPassword({email:e,password:t});n.error?a.innerText="❌ "+n.error.message:(a.innerText="",document.getElementById("loginForm").classList.add("hidden"),document.getElementById("adminControls").classList.remove("hidden"),document.getElementById("adminUserStatus").innerText="● Logged in: "+n.data.user.email)}async function logoutAdmin(){spBase&&await spBase.auth.signOut(),document.getElementById("loginForm").classList.remove("hidden"),document.getElementById("adminControls").classList.add("hidden"),toggleAdminModal()}async function processAndUploadCSV(){var e=document.getElementById("csvFileInput"),t=document.getElementById("uploadStatus"),a=document.getElementById("uploadBtn");if(!e.files.length)return alert("Please select a CSV file first!");a.disabled=!0,t.innerText="⏳ Reading CSV file...",Papa.parse(e.files[0],{header:!0,skipEmptyLines:!0,complete:async function(n){var s=n.data;t.innerText="⏳ Uploading "+s.length+" records...";try{var d=(await spBase.from("FOS Database").delete().neq("id",0)).error;if(d)throw d;var o=(await spBase.from("FOS Database").insert(s)).error;if(o)throw o;t.innerText="✅ Database updated successfully!",alert("🎉 Success: All old data wiped and new CSV loaded!"),e.value=""}catch(l){console.error(l),t.innerText="❌ Error: "+l.message}finally{a.disabled=!1}}})}async function searchData(){var e=document.getElementById("searchInput").value.trim();if(!e)return alert("Please enter FOS Name or Subuser ID");if(!spBase)return alert("Database connection error.");var t=await spBase.from("FOS Database").select("*").or("FOS_Name.ilike.%"+e+"%,FOS_Subuser.ilike.%"+e+"%");if(t.error)return alert("Error fetching data: "+t.error.message);t.data&&t.data.length?(currentFetchedData=t.data,renderDispositionCards(t.data),renderDataTables(t.data)):alert("No records found for: "+e)}function renderDispositionCards(e){var t=document.getElementById("dispositionGrid");t.innerHTML="",t.classList.remove("hidden");var a={};e.forEach(function(e){var t=(e.Cycle||e.Aged_New||"OTHER").toUpperCase();a[t]=(a[t]||0)+1}),Object.keys(a).forEach(function(e){t.innerHTML+='<div onclick="openDispModal(\''+e+'\')" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80 cursor-pointer hover:border-blue-400 hover:shadow-md transition flex justify-between items-center group"><div class="flex items-center gap-3"><div class="p-2 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition" onclick="event.stopPropagation();downloadExcel(\''+e+'\')"><svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg></div><div><p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">'+e+'</p><p class="text-xl font-extrabold text-slate-800">'+a[e]+"</p></div></div><span class=\"text-slate-300 group-hover:text-blue-500 text-sm transition\">➔</span></div>"})}function renderDataTables(e){var t=document.getElementById("resultsContainer"),a=document.getElementById("tableBody");a.innerHTML="",t.classList.remove("hidden"),e.forEach(function(e){a.innerHTML+='<tr class="hover:bg-slate-50/80 transition"><td class="p-3.5 font-bold text-slate-900">'+(e.Loan_Ref_No||"-")+'</td><td class="p-3.5 text-slate-600">'+(e.Customer_Name||"-")+'</td><td class="p-3.5 font-bold text-emerald-600">₹'+(e.POS_Amount||0)+'</td><td class="p-3.5"><span class="bg-blue-50 text-blue-600 font-bold px-2 py-0.5 rounded-md text-[10px]">'+(e.Cycle||"-")+'</span></td><td class="p-3.5 text-slate-600">'+(e.FOS_Name||"-")+'</td><td class="p-3.5 text-slate-600">'+(e.CITY_MANAGER||"-")+"</td></tr>"})}function openDispModal(e){var t=currentFetchedData.filter(function(t){return(t.Cycle||t.Aged_New||"OTHER").toUpperCase()===e});document.getElementById("modalTitle").innerText=e+" Records ("+t.length+")";var a=document.getElementById("modalDownloadBtn");a.onclick=function(){downloadExcel(e)};var n=document.getElementById("modalTableBody");n.innerHTML="",t.forEach(function(e){n.innerHTML+='<tr class="hover:bg-slate-50"><td class="p-3 font-semibold text-slate-900">'+(e.Loan_Ref_No||"-")+'</td><td class="p-3">'+(e.Customer_Name||"-")+'</td><td class="p-3 font-bold text-emerald-600">₹'+(e.POS_Amount||0)+'</td><td class="p-3">'+(e.Cycle||"-")+"</td></tr>"}),document.getElementById("dispModal").classList.remove("hidden")}function downloadExcel(e){if(!currentFetchedData.length)return alert("No data available!");var t="ALL"===e?currentFetchedData:currentFetchedData.filter(function(t){return(t.Cycle||t.Aged_New||"OTHER").toUpperCase()===e.toUpperCase()});if(!t.length)return alert("No records found!");var a=t[0],n=(a.CITY_MANAGER||"CityManager").replace(/\s+/g,"_"),s=(a.FOS_Name||"FOS").replace(/\s+/g,"_"),d=new Date,o=String(d.getDate()).padStart(2,"0")+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getFullYear()).slice(-2),l=n+"_"+s+"_"+o+".xlsm",c=XLSX.utils.json_to_sheet(t),r=XLSX.utils.book_new();XLSX.utils.book_append_sheet(r,c,"Data"),XLSX.writeFile(r,l,{bookType:"xlsm"})}
+    const SUPABASE_URL = "https://xzsgldwwfwmgcdzohgkp.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_FGLa9tMshbylTgTn5Ipf5A_ExB7SUEK";
+    const sbClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+    let EXCEL_RAW_DATA = [];
+    let currentSubuser = "";
+    let cachedRecords = [];
+    let currentPage = 1;
+    const rowsPerPage = 10;
+
+    const iconMap = {
+      "PAID": "fa-solid fa-circle-check",
+      "PTP": "fa-solid fa-heart",
+      "PARTIAL_PAID": "fa-solid fa-circle-minus",
+      "VISIT PENDING": "fa-solid fa-clock",
+      "POSITIVE DISPOSITION": "fa-solid fa-thumbs-up"
+    };
+
+    function toggleAdminModal() {
+      const el = document.getElementById('adminModal');
+      el.style.display = (el.style.display === 'flex') ? 'none' : 'flex';
+    }
+
+    async function loginAdmin() {
+      if (!sbClient) return alert("Database connection error.");
+      const email = document.getElementById('adminEmail').value.trim();
+      const password = document.getElementById('adminPassword').value;
+      const errTag = document.getElementById('adminLoginError');
+
+      errTag.innerText = "⏳ Verifying...";
+      const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        errTag.innerText = "❌ " + error.message;
+      } else {
+        errTag.innerText = "";
+        document.getElementById('adminLoginForm').style.display = 'none';
+        document.getElementById('adminControls').style.display = 'block';
+        document.getElementById('adminUserStatus').innerText = `● Logged in: ${data.user.email}`;
+      }
+    }
+
+    async function logoutAdmin() {
+      if (sbClient) await sbClient.auth.signOut();
+      document.getElementById('adminLoginForm').style.display = 'block';
+      document.getElementById('adminControls').style.display = 'none';
+      toggleAdminModal();
+    }
+
+    async function processAndUploadCSV() {
+      const fileInput = document.getElementById('csvFileInput');
+      const status = document.getElementById('uploadStatus');
+      const uploadBtn = document.getElementById('uploadBtn');
+
+      if (!fileInput.files.length) return alert("Please select a CSV file first!");
+      uploadBtn.disabled = true;
+      status.innerText = "⏳ Reading CSV...";
+
+      Papa.parse(fileInput.files[0], {
+        header: true,
+        skipEmptyLines: true,
+        complete: async function(results) {
+          const rows = results.data;
+          status.innerText = `⏳ Uploading ${rows.length} records...`;
+          try {
+            const { error: delErr } = await sbClient.from('FOS Database').delete().neq('id', 0);
+            if (delErr) throw delErr;
+
+            const { error: insErr } = await sbClient.from('FOS Database').insert(rows);
+            if (insErr) throw insErr;
+
+            status.innerText = "✅ Database updated successfully!";
+            alert("🎉 Success: Old data wiped & new CSV loaded!");
+            fileInput.value = '';
+          } catch (err) {
+            console.error(err);
+            status.innerText = "❌ Error: " + err.message;
+          } finally {
+            uploadBtn.disabled = false;
+          }
+        }
+      });
+    }
+
+    function getDispIcon(name) {
+      return iconMap[name.trim().toUpperCase()] || "fa-solid fa-folder-open";
+    }
+
+    function formatSmartCurrency(val) {
+      var n = Number(val);
+      if (isNaN(n) || n <= 0) return "0";
+      if (n >= 10000000) return (n / 10000000).toFixed(2) + " Cr";
+      if (n >= 100000) return (n / 100000).toFixed(2) + " L";
+      if (n >= 1000) return (n / 1000).toFixed(1) + " K";
+      return n.toString();
+    }
+
+    async function handleLogin() {
+      var subuser = document.getElementById('subuserInput').value.trim().toUpperCase();
+      if (!subuser) return alert("Please enter your subuser number!");
+
+      document.getElementById('loader').style.display = 'flex';
+
+      try {
+        if (EXCEL_RAW_DATA.length === 0 && sbClient) {
+          const { data, error } = await sbClient.from('FOS Database').select('*');
+          if (!error && data && data.length) {
+            EXCEL_RAW_DATA = [["Loan Ref No","Customer Name","POS Amount","Aged New","Cycle","FOS Subuser","FOS Name","CITY_MANAGER","State Head Name","Final Disposition","Report Disposition","Mobile Number"]];
+            data.forEach(r => {
+              EXCEL_RAW_DATA.push([
+                r.Loan_Ref_No || r.Loan_No || "",
+                r.Customer_Name || "",
+                r.POS_Amount || 0,
+                r.Aged_New || r.Visit_Aged || "",
+                r.Cycle || "",
+                r.FOS_Subuser || "",
+                r.FOS_Name || "",
+                r.CITY_MANAGER || "",
+                r.State_Head_Name || "",
+                r.Final_Disposition || "",
+                r.Report_Disposition || "",
+                r.Mobile_Number || ""
+              ]);
+            });
+          }
+        }
+
+        var res = fetchDashboardData(subuser, "ALL");
+        if (!res.success) return alert(res.message);
+
+        currentSubuser = subuser;
+        var dropdown = document.getElementById('cycleDropdown');
+        dropdown.innerHTML = '<option value="ALL">ALL CYCLES</option>';
+        res.cycles.forEach(c => { dropdown.innerHTML += `<option value="${c}">${c}</option>`; });
+
+        document.getElementById('logoutBtn').style.display = 'inline-block';
+        document.getElementById('filterEngineBar').style.display = 'flex';
+        document.getElementById('loginView').style.display = 'none';
+        document.getElementById('dashboardView').style.display = 'block';
+
+        renderDashboard(res.data);
+      } catch (err) {
+        alert("Unable to fetch data!");
+      } finally {
+        document.getElementById('loader').style.display = 'none';
+      }
+    }
+
+    function triggerCycleFilter() {
+      var cycle = document.getElementById('cycleDropdown').value;
+      var res = fetchDashboardData(currentSubuser, cycle);
+      if (res.success) renderDashboard(res.data);
+    }
+
+    function fetchDashboardData(subuserCode, cycleFilter) {
+      subuserCode = subuserCode.toUpperCase();
+      var fos="-", cm="-", sh="-", totalCase=0, paidCount=0, pOsSum=0, resSum=0;
+      var cycleMap = {}, dispMap = {};
+
+      for (var i = 1; i < EXCEL_RAW_DATA.length; i++) {
+        var r = EXCEL_RAW_DATA[i];
+        if (!r[5]) continue;
+        if (String(r[5]).trim().toUpperCase() === subuserCode) {
+          fos = r[6] || fos; cm = r[7] || cm; sh = r[8] || sh;
+          var cyc = String(r[4]).trim();
+          if (cyc) cycleMap[cyc] = true;
+
+          if (cycleFilter && cycleFilter !== "ALL" && cyc !== cycleFilter) continue;
+
+          totalCase++;
+          var pos = Number(r[2]) || 0;
+          var finalDisp = r[9] ? String(r[9]).trim().toUpperCase() : "";
+          var reportDisp = r[10] ? String(r[10]).trim() : "";
+
+          pOsSum += pos;
+          if (finalDisp === "PAID" || finalDisp === "PARTIAL_PAID") {
+            paidCount++;
+            resSum += pos;
+          }
+          if (reportDisp) dispMap[reportDisp] = (dispMap[reportDisp] || 0) + 1;
+        }
+      }
+
+      if (totalCase === 0 && cycleFilter === "ALL") return { success: false, message: "Subuser ID not found!" };
+
+      return {
+        success: true,
+        cycles: Object.keys(cycleMap),
+        data: {
+          fos, cm, sh, totalCase, paidCount,
+          pctPaid: totalCase > 0 ? ((paidCount / totalCase) * 100).toFixed(1) + "%" : "0%",
+          pOs: formatSmartCurrency(pOsSum),
+          resolution: formatSmartCurrency(resSum),
+          pctResolution: pOsSum > 0 ? ((resSum / pOsSum) * 100).toFixed(1) + "%" : "0%",
+          dispositions: dispMap
+        }
+      };
+    }
+
+    function renderDashboard(data) {
+      document.getElementById('profFos').innerText = data.fos;
+      document.getElementById('profCm').innerText = data.cm;
+      document.getElementById('profSh').innerText = data.sh;
+      document.getElementById('kpiTotalCase').innerText = data.totalCase;
+      document.getElementById('kpiPaidCount').innerText = data.paidCount;
+      document.getElementById('kpiPctPaid').innerText = data.pctPaid;
+      document.getElementById('kpiPOs').innerText = data.pOs;
+      document.getElementById('kpiResolution').innerText = data.resolution;
+      document.getElementById('kpiPctResolution').innerText = data.pctResolution;
+
+      var container = document.getElementById('dispositionContainer');
+      container.innerHTML = "";
+      for (var disp in data.dispositions) {
+        container.innerHTML += `
+          <div class="disp-row">
+            <div class="disp-left" onclick="openDetails('${disp}')" style="cursor:pointer;flex:1;">
+              <i class="${getDispIcon(disp)}" style="color:#2563eb;"></i>
+              <span class="disp-name">${disp}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="disp-badge" onclick="openDetails('${disp}')" style="cursor:pointer;">${data.dispositions[disp]}</span>
+              <button class="disp-download-btn" title="Download Excel" onclick="event.stopPropagation();downloadDispositionExcel('${disp}')">
+                <i class="fa-solid fa-download"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function openDetails(dispName) {
+      document.getElementById('modalTitle').innerText = dispName + " Details";
+      var cycleVal = document.getElementById('cycleDropdown').value;
+      var subuserUpper = currentSubuser.toUpperCase();
+      var filtered = [];
+
+      for (var i = 1; i < EXCEL_RAW_DATA.length; i++) {
+        var r = EXCEL_RAW_DATA[i];
+        if (!r[5]) continue;
+        var subuser = String(r[5]).trim().toUpperCase();
+        var cyc = String(r[4]).trim();
+        var reportDisp = r[10] ? String(r[10]).trim() : "";
+
+        if (subuser === subuserUpper && reportDisp === dispName) {
+          if (cycleVal && cycleVal !== "ALL" && cyc !== cycleVal) continue;
+          filtered.push({
+            loanNo: r[0] || "-", custName: r[1] || "-", posAmount: Number(r[2]) || 0,
+            visitAged: r[3] || "-", cycle: cyc || "-", finalDisp: r[9] || "-", mobileNo: r[11] || "-"
+          });
+        }
+      }
+
+      filtered.sort((a, b) => b.posAmount - a.posAmount);
+      cachedRecords = filtered;
+      currentPage = 1;
+      displayPageData();
+      document.getElementById('detailModal').style.display = 'block';
+    }
+
+    function displayPageData() {
+      var body = document.getElementById('modalBody');
+      body.innerHTML = "";
+      var totalPages = Math.ceil(cachedRecords.length / rowsPerPage) || 1;
+      var start = (currentPage - 1) * rowsPerPage;
+      var end = Math.min(start + rowsPerPage, cachedRecords.length);
+
+      for (var i = start; i < end; i++) {
+        var r = cachedRecords[i];
+        body.innerHTML += `
+          <div class="loan-card">
+            <div class="loan-card-row"><span class="l-lbl">Loan No.</span><span class="l-val">${r.loanNo}</span></div>
+            <div class="loan-card-row"><span class="l-lbl">Customer Name</span><span class="l-val">${r.custName}</span></div>
+            <div class="loan-card-row"><span class="l-lbl">CDC</span><span class="l-val">${r.mobileNo}</span></div>
+            <div class="loan-card-row"><span class="l-lbl">POS Amount</span><span class="l-val pos-red">₹${Number(r.posAmount).toLocaleString('en-IN')}</span></div>
+            <div class="loan-card-row"><span class="l-lbl">Visit Aged</span><span class="l-val">${r.visitAged}</span></div>
+            <div class="loan-card-row"><span class="l-lbl">Cycle</span><span class="l-val">${r.cycle}</span></div>
+            <div class="loan-card-row"><span class="l-lbl">Final Disposition</span><span class="l-val disp-blue">${r.finalDisp}</span></div>
+          </div>
+        `;
+      }
+      body.scrollTop = 0;
+      document.getElementById('pageNumberDisplay').innerText = `Page ${currentPage} of ${totalPages}`;
+      document.getElementById('prevPageBtn').disabled = (currentPage === 1);
+      document.getElementById('nextPageBtn').disabled = (currentPage === totalPages);
+    }
+
+    function changePage(delta) {
+      currentPage += delta;
+      displayPageData();
+    }
+
+    function closeModal() {
+      document.getElementById('detailModal').style.display = 'none';
+    }
+
+    async function downloadDispositionExcel(dispName) {
+      var cycleVal = document.getElementById('cycleDropdown').value;
+      var subuserUpper = currentSubuser.toUpperCase();
+      var rows = [];
+
+      for (var i = 1; i < EXCEL_RAW_DATA.length; i++) {
+        var r = EXCEL_RAW_DATA[i];
+        if (!r[5]) continue;
+        var subuser = String(r[5]).trim().toUpperCase();
+        var cyc = String(r[4]).trim();
+        var reportDisp = r[10] ? String(r[10]).trim() : "";
+
+        if (subuser === subuserUpper && reportDisp === dispName) {
+          if (cycleVal && cycleVal !== "ALL" && cyc !== cycleVal) continue;
+          rows.push({
+            loanRefNo: r[0] || "-", customerName: r[1] || "-", posAmount: Number(r[2]) || 0,
+            agedNew: r[3] || "-", cycle: cyc || "-", fosSubuser: r[5] || "-",
+            fosName: r[6] || "-", cityManager: r[7] || "-", stateHeadName: r[8] || "-",
+            finalDisposition: r[9] || "-", reportDisposition: r[10] || "-", mobileNumber: r[11] || "-"
+          });
+        }
+      }
+
+      if (rows.length === 0) return alert("No records found to download!");
+      rows.sort((a, b) => b.posAmount - a.posAmount);
+
+      var wb = new ExcelJS.Workbook();
+      var ws = wb.addWorksheet("Data");
+      ws.columns = [
+        { header: "Loan_Ref_No", key: "loanRefNo" },
+        { header: "Customer_Name", key: "customerName" },
+        { header: "POS_Amount", key: "posAmount" },
+        { header: "Aged_New", key: "agedNew" },
+        { header: "Cycle", key: "cycle" },
+        { header: "FOS_Subuser", key: "fosSubuser" },
+        { header: "FOS_Name", key: "fosName" },
+        { header: "CITY_MANAGER", key: "cityManager" },
+        { header: "State_Head_Name", key: "stateHeadName" },
+        { header: "Final_Disposition", key: "finalDisposition" },
+        { header: "Report_Disposition", key: "reportDisposition" },
+        { header: "Mobile_Number", key: "mobileNumber" }
+      ];
+
+      var headerRow = ws.getRow(1);
+      headerRow.eachCell(cell => {
+        cell.font = { bold: true, color: { argb: "FF1E3A8A" }, name: "Arial", size: 11 };
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDCE6F5" } };
+        cell.alignment = { horizontal: "center", vertical: "middle" };
+      });
+
+      rows.forEach(r => {
+        var row = ws.addRow(r);
+        row.getCell("posAmount").numFmt = "#,##,##0";
+      });
+
+      var fosNameFile = (rows[0].fosName || "FOS").replace(/\s+/g, "_");
+      var fileName = `${fosNameFile}_${dispName}_${new Date().toISOString().slice(0,10)}.xlsx`;
+
+      var buffer = await wb.xlsx.writeBuffer();
+      var blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      var link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      link.click();
+    }
+
+    function handleInstantLogout() {
+      currentSubuser = "";
+      cachedRecords = [];
+      document.getElementById('subuserInput').value = "";
+      document.getElementById('logoutBtn').style.display = "none";
+      document.getElementById('filterEngineBar').style.display = "none";
+      document.getElementById('dashboardView').style.display = "none";
+      document.getElementById('loginView').style.display = "flex";
+    }
   </script>
 </body>
 </html>
